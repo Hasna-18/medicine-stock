@@ -8,15 +8,39 @@ function Mainpage() {
   const [currentpg, setcurrentpg] = useState(1);
   const [search, setsearch] = useState("");
   const [editIndex, setEditIndex] = useState(null);
+  const [loaded, setLoaded] = useState(false);
+
   const navigate = useNavigate();
 
   const itemsperpg = 3;
 
+  // USER-BASED STORAGE KEY
+  const user = localStorage.getItem("user");
+  const storageKey = `${user}_medicines`;
+
+  // ----------- LOAD DATA ONCE -----------
+  useEffect(() => {
+    const saved = localStorage.getItem(storageKey);
+    if (saved) {
+      setitemlist(JSON.parse(saved));
+    }
+    setLoaded(true); // loading complete
+  }, [storageKey]);
+
+  // ----------- SAVE AFTER LOADED -----------
+  useEffect(() => {
+    if (loaded) {
+      localStorage.setItem(storageKey, JSON.stringify(itemlist));
+    }
+  }, [itemlist, loaded, storageKey]);
+
+  // ADD ITEM
   const submititem = () => {
     if (itemlist.length >= 5) {
       alert("limit 5");
       return;
     }
+
     if (itemname && itemstock) {
       const date = new Date().toLocaleString();
       setitemlist([...itemlist, { itemname, itemstock, date }]);
@@ -27,56 +51,51 @@ function Mainpage() {
     }
   };
 
+  // DELETE ITEM
   const deleteitem = (index) => {
     const newList = [...itemlist];
     newList.splice(index, 1);
     setitemlist(newList);
   };
 
+  // START EDIT
   const editItem = (index) => {
     setEditIndex(index);
     setitemname(itemlist[index].itemname);
     setitemstock(itemlist[index].itemstock);
   };
 
+  // UPDATE ITEM
   const updateItem = () => {
     const newList = [...itemlist];
-    newList[editIndex] = { itemname, itemstock, date: new Date().toLocaleString() };
+    newList[editIndex] = {
+      itemname,
+      itemstock,
+      date: new Date().toLocaleString(),
+    };
+
     setitemlist(newList);
     setitemname("");
     setitemstock("");
     setEditIndex(null);
   };
 
+  // LOGOUT
   const logout = () => {
-    localStorage.clear();
-    navigate("/");
+    localStorage.removeItem("token");
+    navigate("/login");
   };
 
-  // filter by search
+  // SEARCH FILTER
   const filtered = itemlist.filter((item) =>
-  item.itemname.toLowerCase().includes(search.toLowerCase())
-);
+    item.itemname.toLowerCase().includes(search.toLowerCase())
+  );
 
-
-  // pagination on filtered list
+  // PAGINATION
   const indexOfLastItem = currentpg * itemsperpg;
   const indexOfFirstItem = indexOfLastItem - itemsperpg;
   const currentItems = filtered.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filtered.length / itemsperpg);
-
-  // Load medicines from localStorage on component mount
-  useEffect(() => {
-    const savedMedicines = localStorage.getItem("medicines");
-    if (savedMedicines) {
-      setitemlist(JSON.parse(savedMedicines));
-    }
-  }, []);
-
-  // Save to localStorage whenever itemlist changes
-  useEffect(() => {
-    localStorage.setItem("medicines", JSON.stringify(itemlist));
-  }, [itemlist]);
 
   return (
     <div>
@@ -103,9 +122,10 @@ function Mainpage() {
         {editIndex === null ? "Add" : "Update"}
       </button>
 
-      <br />
-      <br />
+      <br /><br />
+
       <h3>Available Stock</h3>
+
       <input
         type="text"
         placeholder="Search..."
@@ -122,6 +142,7 @@ function Mainpage() {
             <th>Actions</th>
           </tr>
         </thead>
+
         <tbody>
           {currentItems.map((item, i) => (
             <tr key={i}>
@@ -129,8 +150,8 @@ function Mainpage() {
               <td>{item.itemstock}</td>
               <td>{item.date}</td>
               <td>
-                <button onClick={() => editItem(i)}>Edit</button>
-                <button onClick={() => deleteitem(i)}>Delete</button>
+                <button onClick={() => editItem(indexOfFirstItem + i)}>Edit</button>
+                <button onClick={() => deleteitem(indexOfFirstItem + i)}>Delete</button>
               </td>
             </tr>
           ))}
